@@ -1,0 +1,7 @@
+cudf-cu12==25.8.* --extra-index-url https://pypi.nvidia.com
+cuml-cu12==25.8.* --extra-index-url https://pypi.nvidia.com
+pylibraft-cu12==25.8.* --extra-index-url https://pypi.nvidia.com
+raft-dask-cu12==25.8.* --extra-index-url https://pypi.nvidia.com
+torch==2.7.1
+torchvision==0.22.1
+transformers==4.53.0
