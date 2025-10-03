@@ -60,6 +60,7 @@ void interrupt_storm(uint8_t *page, uint32_t num_blocks, uint32_t num_threads, u
         for (int i = 0; i < num_blocks * num_threads; i++) {
             values[i] = page[i * stride];
         }
+        asm volatile ("mfence\n");
         fprintf(stderr, "[%d] done\n", counter++);
         cudaDeviceSynchronize();
     }

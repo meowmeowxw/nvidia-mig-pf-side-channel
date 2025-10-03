@@ -227,7 +227,7 @@ __global__ void setup_kernel(curandState *state, unsigned long seed) {
     curand_init(seed, id, 0, &state[id]);
 }
 
-__global__ void uvm_load(uint8_t *values, int num_threads, uint64_t *output, int iterations, curandState *state) {
+__global__ void uvm_load(uint8_t *values, int num_threads, uint64_t *output, int iterations, uint8_t *page) {
     int idx = threadIdx.x;
     int elements_per_thread = (L2_CACHE / sizeof(uint8_t)) / num_threads;
     uint64_t start_idx = idx * elements_per_thread;
@@ -236,19 +236,15 @@ __global__ void uvm_load(uint8_t *values, int num_threads, uint64_t *output, int
     if (end_idx > (L2_CACHE / sizeof(uint8_t))) {
         end_idx = L2_CACHE / sizeof(uint8_t);
     }
-    uint32_t seed = clock();
-    for (int j = 0; j < iterations; j++) {
-        uint64_t start = clock64(), end = 0, val = 0;
-        int i = random_range(state, 0, 214748369);
-        // printf("i: %d\n", i);
-        // int i = simple_random_range(0, 214748369, seed);
-        val += __ldcg(&values[i]);
-        if (idx == 0) {
-            start *= (val + 1);
-            end = clock64() - start;
-            output[j] = end;
-        }
-    }
+    // uint32_t seed = clock();
+    uint64_t start = clock64(), end = 0, val = 0;
+    // int i = random_range(state, 0, 214748369);
+    // printf("i: %d\n", i);
+    // int i = simple_random_range(0, 214748369, seed);
+    val += __ldcg(page);
+    start *= (val + 1);
+    end = clock64() - start;
+    *output = end;
 }
 
 __global__ void l2_cache_cvwb(uint8_t *values, int num_threads, uint64_t *output, int iterations) {
@@ -540,12 +536,19 @@ int main(int argc, char *argv[]) {
             cudaDeviceSynchronize();
             break;
         case 11:
-            uvm_load<<<1, num_threads>>>(chunk0, num_threads, d_latency_values, iterations / 2, d_state);
-            cudaDeviceSynchronize();
-            setup_kernel<<<1,1>>>(d_state, time(NULL) * time(NULL));
-            cudaDeviceSynchronize();
-            uvm_load<<<1, num_threads>>>(chunk1, num_threads, &d_latency_values[iterations / 2], iterations / 2, d_state);
-            cudaDeviceSynchronize();
+            srand(time(NULL));
+            for (int i = 0; i < iterations; i++) {
+                uint64_t page = ((uint64_t)chunk0) + 0x40000 * (rand() % 8000);
+                volatile uint8_t x = *(uint8_t *)page;
+                mfence();
+                uvm_load<<<1, num_threads>>>(chunk0, num_threads, &d_latency_values[i], iterations, (uint8_t *)page);
+                cudaDeviceSynchronize();
+            }
+            // cudaDeviceSynchronize();
+            // setup_kernel<<<1,1>>>(d_state, time(NULL) * time(NULL));
+            // cudaDeviceSynchronize();
+            // uvm_load<<<1, num_threads>>>(chunk1, num_threads, &d_latency_values[iterations / 2], iterations / 2, d_state);
+            // cudaDeviceSynchronize();
             break;
     }
 
