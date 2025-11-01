@@ -259,6 +259,8 @@ class LogStatsVisualizer:
             log_suffix = '_log' if self.use_log_scale else ''
             output_file = os.path.join(output_dir, f'{safe_title}_{stat_type}{log_suffix}.pdf')
             plt.savefig(output_file, dpi=300, bbox_inches='tight', transparent=True, facecolor='none', edgecolor='none')
+            output_file = os.path.join(output_dir, f'{safe_title}_{stat_type}{log_suffix}.png')
+            plt.savefig(output_file, dpi=300, bbox_inches='tight', transparent=True, facecolor='none', edgecolor='none')
             print(f"Saved grouped plot: {output_file}")
             plt.close()
         else:

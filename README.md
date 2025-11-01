@@ -14,7 +14,7 @@ We identified three main sources of contention that contribute to the page fault
 variation:
 
 1. PCIe bus usage.
-2. Memory access operations (cache hints).
+2. Memory access operations on L2/Constant Cache/VRAM.
 3. Shared kernel-level driver code and queue (fault buffer) - Only applicable to
 concurrent UVM workloads in containerized environments.
 
@@ -30,14 +30,44 @@ Tested on Ubuntu 24
 
 ### Cross-GI Interference
 
+We test whether a page fault storm running on GPU Instance 0 influence the
+latency of simple GPU kernels that access memory through different cache hints
+operator on GPU Instance 1.
+First, we collect the latencies when GPU Instance 0 is not running a page fault storm (idle baseline) for different GPU kernels, then we collect the latencies when GPU Instance 0 executes a page fault storm or other types of workload (PCIe usage - copy_data, PyTorch).
+
 ```
 ./run_docker_cross_gi.sh
 python3 plotter_cache.py -s p99 -o figs/ --log_scale on
 ```
 
-### Side Channel on vLLM
+GPU device memory accesses (L1/L2/Constant Cache/VRAM) latency overhead plot:
+![GPU device memory accesses](./figs/gpu-internal-memory_p99.png)
+
+GPU host memory accesses (PCIe/UVM-based memory) latency overhead plot:
+![](./figs/gpu-host-memory_p99_log.png)
+
+### Side Channel
+
+We collect page fault latencies on GPU Instance 0, while GPU Instance 1 executes
+different types of workload.
+
+#### Simple Case Plot
+
+```
+./run_docker_simple.sh
+python3 plotter_simple.py --logs_dir ./logs_simple --plot_type tail_avg --window_size
+ 3000 --fig_output ./figs/pf_latency_simple.pdf --show_uncertainty --log_scale on
+```
+
+![](./figs/pf_latency_simple.png)
+
+#### vLLM Model Fingerprint
 
 ```
 ./run_docker_vllm.sh
 python3 classifier_llm.py --logs_dir ./logs_llm/ --window_size 30000 --step 3000
 ```
+
+## Disclosure
+
+We reported to NVIDIA that side channel can fingerprint ML workloads across GPU Instances in march 2025, and they acknowledged the risk.
