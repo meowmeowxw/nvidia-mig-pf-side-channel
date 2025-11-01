@@ -3,3 +3,4 @@ logs_llm/
 figs/
 logs_side_channel_cache/
 logs_simple/
+logs*/

@@ -1,9 +1,9 @@
 #!/bin/sh
 
-LOGS_DIR="./logs_simple"
+LOGS_DIR="./logs_ml"
 mkdir -p $LOGS_DIR
 make
-num_samples_arg=120000
+num_samples_arg="2000000"
 
 stop_all_containers() {
     sudo docker stop $(sudo docker ps -a -q) >/dev/null 2>/dev/null
@@ -29,48 +29,23 @@ start_background_model() {
     sleep 10
 }
 
-start_background_vllm() {
-    local model=$1
-    echo "[!] Starting $model"
-    sudo docker run --rm --gpus "device=0:1" -v $PWD:/workspace --shm-size=16g -w /workspace ai_image \
-        python3 -u vllm_runner.py --model $model &
-    sleep 60
-}
-
-start_background_cudf() {
-    sudo docker run --rm --gpus "device=0:1" -v $PWD:/workspace --shm-size=16g -w /workspace ai_image \
-        python3 -u ./cudf_example.py &
-    sleep 10
-}
-
-start_background_program() {
-        local kernel_option=$1
-        sudo docker run --rm --gpus "device=0:1" -v $PWD:/workspace --shm-size=16g -w /workspace ai_image \
-            ./cache_accesses_loop --option $kernel_option &
-        sleep 2
-}
-
 # Optional: Enable persistent mode for faster execution
 # sudo nvidia-smi -pm 1
 
 stop_all_containers
-run_test "inactive"
-stop_all_containers
-
-# # 
-start_background_program "2"
-run_test "ld_cg_st_cg"
-stop_all_containers
 
 start_background_model "mobilenetv2"
-run_test "pytorch"
+run_test "mobilenetv2"
 stop_all_containers
 
-start_background_vllm "Phi-3-Mini"
-run_test "vLLM"
+start_background_model "resnet"
+run_test "resnet"
 stop_all_containers
 
-start_background_cudf
-run_test "cudf"
+start_background_model "vgg"
+run_test "vgg"
 stop_all_containers
 
+start_background_model "densenet"
+run_test "densenet"
+stop_all_containers

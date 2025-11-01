@@ -9,8 +9,9 @@ from matplotlib.ticker import FuncFormatter
 import seaborn as sns # Added for the color palette function
 
 class LogStatsVisualizer:
-    def __init__(self, logs_dir="logs_cache"):
+    def __init__(self, logs_dir="logs_cache", use_log_scale=False):
         self.logs_dir = logs_dir
+        self.use_log_scale = use_log_scale
         self.data = defaultdict(lambda: defaultdict(list))
         self.baselines = {}  # Store inactive baselines for each config
         
@@ -206,8 +207,43 @@ class LogStatsVisualizer:
                 y_errors = np.array(errors).T
                 ax.errorbar(pos, overheads, yerr=y_errors, fmt='none', ecolor='black', capsize=4, elinewidth=1.5, alpha=0.7)
         
+        # Apply log scale if enabled
+        # Apply log scale if enabled
+        if self.use_log_scale:
+            # Use symlog with a linear threshold around zero
+            ax.set_yscale('symlog', linthresh=1e3)
+            ax.set_ylabel(f'{stat_type.capitalize()} Overhead (cycles, log scale)')
+            
+            # Custom formatter for cleaner labels
+            def log_formatter(x, p):
+                if abs(x) < 1e3:  # Linear region - hide these labels
+                    return ''
+                elif abs(x) >= 1e6:
+                    return f'{x/1e6:.1f}M'
+                elif abs(x) >= 1e3:
+                    return f'{x/1e3:.0f}K'
+                return format(int(x), ',')
+            
+            ax.get_yaxis().set_major_formatter(FuncFormatter(log_formatter))
+            
+            # Set custom tick locations to exclude ±100
+            from matplotlib.ticker import FixedLocator
+            # Get current ticks and filter out those in the linear region
+            current_ylim = ax.get_ylim()
+            # Create ticks for positive and negative sides
+            pos_ticks = [1e3, 1e4, 1e5, 1e6, 1e7]
+            neg_ticks = [-1e3, -1e4, -1e5, -1e6, -1e7]
+            custom_ticks = [t for t in neg_ticks if t >= current_ylim[0]] + [0] + [t for t in pos_ticks if t <= current_ylim[1]]
+            ax.yaxis.set_major_locator(FixedLocator(custom_ticks))
+            
+            # Adjust grid to show only major lines
+            ax.grid(True, axis='y', which='major', linestyle='-', alpha=0.4, linewidth=0.8)
+            ax.grid(True, axis='y', which='minor', linestyle=':', alpha=0.2, linewidth=0.5)
+        else:
+            ax.set_ylabel(f'{stat_type.capitalize()} Overhead (cycles)')
+            ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
+        
         # Final Touches & Styling
-        ax.set_ylabel(f'{stat_type.capitalize()} Overhead (cycles)')
         # ax.set_title(title)
         ax.set_xticks(x_positions)
         ax.set_xticklabels(sorted_labels, rotation=45, ha="right")
@@ -215,14 +251,13 @@ class LogStatsVisualizer:
         ax.grid(True, axis='y', linestyle='--', alpha=0.6)
         ax.legend(title="Configuration")  # Changed title from "Workload" to "Configuration"
         
-        ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
-        
         plt.tight_layout()
         
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
             safe_title = re.sub(r'[^a-zA-Z0-9_-]', '_', title)
-            output_file = os.path.join(output_dir, f'{safe_title}_{stat_type}.pdf')
+            log_suffix = '_log' if self.use_log_scale else ''
+            output_file = os.path.join(output_dir, f'{safe_title}_{stat_type}{log_suffix}.pdf')
             plt.savefig(output_file, dpi=300, bbox_inches='tight', transparent=True, facecolor='none', edgecolor='none')
             print(f"Saved grouped plot: {output_file}")
             plt.close()
@@ -264,7 +299,8 @@ class LogStatsVisualizer:
         print(f"Parsing logs from {self.logs_dir}...")
         self.parse_logs()
         self.print_summary()
-        print(f"\nCreating grouped comparison plots with {stat_type} statistics...")
+        scale_type = "logarithmic" if self.use_log_scale else "linear"
+        print(f"\nCreating grouped comparison plots with {stat_type} statistics ({scale_type} scale)...")
         self.create_grouped_comparison_plots(stat_type, output_dir)
 
 def parse_arguments():
@@ -281,13 +317,18 @@ def parse_arguments():
                        type=str,
                        default='logs_cache',
                        help='Directory containing log files (default: logs_cache)')
+    parser.add_argument('--log_scale',
+                       choices=['on', 'off'],
+                       default='off',
+                       help='Use logarithmic scale for y-axis (default: off)')
     return parser.parse_args()
 
 def main():
     """Main function with command-line argument support."""
     try:
         args = parse_arguments()
-        visualizer = LogStatsVisualizer(args.logs_dir)
+        use_log_scale = (args.log_scale == 'on')
+        visualizer = LogStatsVisualizer(args.logs_dir, use_log_scale)
         visualizer.run(args.statistics, args.output)
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")

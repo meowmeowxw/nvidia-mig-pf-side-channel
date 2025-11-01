@@ -241,7 +241,9 @@ __global__ void uvm_load(uint8_t *values, int num_threads, uint64_t *output, int
     // int i = random_range(state, 0, 214748369);
     // printf("i: %d\n", i);
     // int i = simple_random_range(0, 214748369, seed);
-    val += __ldcg(page);
+    for (int i = start_idx; i < end_idx; i += CACHE_LINE) {
+        val += __ldcg(&page[i]);
+    }
     start *= (val + 1);
     end = clock64() - start;
     *output = end;
@@ -538,8 +540,9 @@ int main(int argc, char *argv[]) {
         case 11:
             srand(time(NULL));
             for (int i = 0; i < iterations; i++) {
-                uint64_t page = ((uint64_t)chunk0) + 0x40000 * (rand() % 8000);
-                volatile uint8_t x = *(uint8_t *)page;
+                uint64_t page = ((uint64_t)chunk0)  + 0x40000 * (rand() % 8000);
+                *(uint64_t *)page = 0x0;
+                // cudaMemAdvise(&chunk0, 0x1000, cudaMemAdviseSetPreferredLocation, cudaCpuDeviceId);
                 mfence();
                 uvm_load<<<1, num_threads>>>(chunk0, num_threads, &d_latency_values[i], iterations, (uint8_t *)page);
                 cudaDeviceSynchronize();

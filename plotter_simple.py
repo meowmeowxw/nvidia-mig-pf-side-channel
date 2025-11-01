@@ -144,7 +144,7 @@ def main():
                        help='Show uncertainty bands (std for mean, IQR for median)')
     parser.add_argument('--title', default='', help='Custom plot title')
     parser.add_argument('--xlabel', default='Window Index', help='X-axis label')
-    parser.add_argument('--ylabel', default='Value', help='Y-axis label')
+    parser.add_argument('--ylabel', default='Cycles', help='Y-axis label')
     parser.add_argument('--figsize', nargs=2, type=float, default=[8, 6], 
                        help='Figure size in inches (width height)')
     parser.add_argument('--log_scale', choices=['auto', 'on', 'off'], default='auto',
@@ -251,11 +251,19 @@ def main():
         use_log_scale = should_use_log_scale(all_y_values, threshold_factor=args.log_threshold)
     
     if use_log_scale:
+        def log_formatter(x, p):
+            if abs(x) < 1e3:  # Linear region - hide these labels
+                return ''
+            elif abs(x) >= 1e6:
+                return f'{x/1e6:.1f}M'
+            elif abs(x) >= 1e3:
+                return f'{x/1e3:.0f}K'
+            return format(int(x), ',')
         ax.set_yscale('log')
         ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
         ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(0.1, 1, 0.1), numticks=10))
-        ax.yaxis.set_minor_formatter(FuncFormatter(lambda y, _: f"{y:.0f}"))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+        ax.yaxis.set_minor_formatter(FuncFormatter(log_formatter))
+        ax.yaxis.set_major_formatter(FuncFormatter(log_formatter))
         ax.tick_params(axis='y', which='minor', labelsize=10)
         print(f"Using logarithmic y-axis scale (ratio threshold: {args.log_threshold})")
     

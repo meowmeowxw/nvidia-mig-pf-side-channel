@@ -46,11 +46,8 @@ sudo nvidia-smi -i 0 -mig 1
 sudo nvidia-smi mig -cgi 5,5 -C
 
 
-cd storm
+mkdir -p models
+mkdir -p dataset
 sudo docker build -t ai_image .
-sudo docker run --rm --gpus "device=0:0" -v $PWD:/workspace -v ~/.cache/torch/:/root/.cache/torch -v ~/.cache/huggingface:/root/.cache/huggingface --shm-size=16g -w /workspace ai_image python3 -u predownload_models.py
-cd ../pf-latency
-sudo docker build -t ai_image .
-sudo docker run --rm --gpus "device=0:0" -v $PWD:/workspace -v ~/.cache/torch/:/root/.cache/torch -v ~/.cache/huggingface:/root/.cache/huggingface --shm-size=16g -w /workspace ai_image python3 -u predownload_models.py
-sudo docker run --rm --gpus "device=0:0" -v $PWD:/workspace -v ~/.cache/huggingface:/root/.cache/huggingface --shm-size=16g -w /workspace ai_image python3 -u predownload_llm.py
-
+sudo docker run --rm --gpus "device=0:0" -v $PWD:/workspace --shm-size=16g -w /workspace ai_image python3 vllm_runner.py --download
+sudo docker run --rm --gpus "device=0:0" -v $PWD:/workspace --shm-size=16g -w /workspace ai_image python3 torch_ml.py --download

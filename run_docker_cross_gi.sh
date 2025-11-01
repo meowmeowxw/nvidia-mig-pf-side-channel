@@ -74,8 +74,8 @@ echo "Stride: $STRIDE"
 echo ""
 stop_all_containers
 
+MIN_OPTION=2
 MAX_OPTION=11
-MIN_OPTION=11
 
 for i in $(seq $MIN_OPTION $MAX_OPTION)
 do
@@ -113,7 +113,7 @@ do
     sudo docker run --rm --gpus "device=0:1" \
         -v $PWD:/workspace -v ~/.cache/huggingface:/root/.cache/huggingface \
         -w /workspace --shm-size=16g -d \
-        "$DOCKER_IMAGE" python3 -u torch_models.py --mode train --batch-size 32 vgg > /dev/null 2>&1
+        "$DOCKER_IMAGE" python3 -u torch_ml.py --mode train --batch-size 32 vgg > /dev/null 2>&1
     sleep 6
 
     sudo docker run --rm --gpus "device=0:0" \
