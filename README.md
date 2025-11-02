@@ -1,4 +1,4 @@
-# NVIDIA MIG Side Channel
+# NVIDIA MIG Page Fault Side Channel
 
 ## Introduction
 
