@@ -181,9 +181,9 @@ int main(int argc, char *argv[]) {
         fflush(stdout);
         
         // Sleep before next sample (except for the last sample)
-        if (sample < num_samples - 1) {
-            usleep((int)(interval * 1000000)); // Convert to microseconds
-        }
+        // if (sample < num_samples - 1) {
+        //     usleep((int)(interval * 1000000)); // Convert to microseconds
+        // }
     }
     
     printf("\nData collection complete. %d samples written to %s\n", num_samples, output_path);

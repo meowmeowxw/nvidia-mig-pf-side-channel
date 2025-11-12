@@ -1,7 +1,7 @@
 NVCC = nvcc
 FLAGS = -arch=sm_80 -diag-suppress 2464 -lcurand
 
-FILES = attack.cu cache_accesses_victim.cu pf_latency_llm.cu pf_latency.cu cache_accesses_loop.cu victim.cu
+FILES = attack.cu cache_accesses_victim.cu pf_latency_llm.cu pf_latency.cu cache_accesses_loop.cu victim.cu pcie_noiser.cu
 
 ifndef CUDA_PATH
 	CUDA_PATH := /usr/local/cuda
