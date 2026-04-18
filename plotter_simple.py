@@ -4,11 +4,8 @@ import argparse
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
-import matplotlib.patches as patches
-from matplotlib.ticker import MaxNLocator, LogLocator, LogFormatterSciNotation, FuncFormatter, FormatStrFormatter
+from matplotlib.ticker import MaxNLocator, LogLocator, FuncFormatter
 import seaborn as sns
-from scipy.stats import gmean
 
 # Set publication-ready style
 plt.style.use('seaborn-v0_8-whitegrid')
@@ -39,6 +36,7 @@ def compute_windowed_statistics(data, window_size, num_windows=None):
     q75 = []
     p90 = []
     p95 = []
+    p99 = []
     tail_avgs = []  # Top 20% average
     
     end = len(data) if num_windows is None else num_windows * window_size
@@ -52,6 +50,7 @@ def compute_windowed_statistics(data, window_size, num_windows=None):
             q75.append(np.percentile(window, 75))
             p90.append(np.percentile(window, 90))
             p95.append(np.percentile(window, 95))
+            p99.append(np.percentile(window, 99))
             
             # Compute tail average (mean of top 20%)
             sorted_window = np.sort(window)
@@ -70,6 +69,7 @@ def compute_windowed_statistics(data, window_size, num_windows=None):
         'q75': np.array(q75),
         'p90': np.array(p90),
         'p95': np.array(p95),
+        'p99': np.array(p99),
         'tail_avgs': np.array(tail_avgs)
     }
 
@@ -118,14 +118,17 @@ def get_publication_colors(n_colors):
         return sns.color_palette("husl", n_colors)
 
 def format_filename_for_label(filename):
+    normalized = filename.lower()
+    if normalized == "inactive":
+        return "Inactive"
+    if normalized == "pytorch":
+        return "PyTorch"
+    if normalized == "cudf":
+        return "cuDF"
     if filename == "ld_cg_st_cg":
         return "ld.cg + st.cg"
     if filename == "vLLM":
         return "vLLM"
-    if filename == "pytorch":
-        return "PyTorch"
-    if filename == "cudf":
-        return "cuDF"
     return filename.title()
     # name = filename.replace('.log', '').replace('.txt', '').replace('.csv', '')
     # name = name.replace('_', ' ')
@@ -138,7 +141,7 @@ def main():
     parser.add_argument('--num_windows', type=int, default=None, help='Number of windows')
     parser.add_argument('--column', type=int, default=0, help='Column to use (0-indexed)')
     parser.add_argument('--fig_output', required=True, help='Output figure path (PDF recommended)')
-    parser.add_argument('--plot_type', choices=['median', 'mean', 'p90', 'p95', 'tail_avg', 'std'], default='median', 
+    parser.add_argument('--plot_type', choices=['median', 'mean', 'p90', 'p95', 'p99', 'tail_avg', 'std'], default='median', 
                        help='Type of statistic to plot (tail_avg = mean of top 20%)')
     parser.add_argument('--show_uncertainty', action='store_true', 
                        help='Show uncertainty bands (std for mean, IQR for median)')
@@ -178,11 +181,14 @@ def main():
         'axes.linewidth': 1.2,
         'grid.linewidth': 0.8,
         'lines.linewidth': 2,
-        'lines.markersize': 8
+        'lines.markersize': 8,
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
     })
-    
+
     fig, ax = plt.subplots(figsize=args.figsize)
     colors = get_publication_colors(len(log_files))
+    markers = ['o', 's', '^', 'D', 'v', 'P', 'X', '*']
     
     # First pass: collect all y-values to determine if log scale is needed
     all_y_values = []
@@ -222,6 +228,11 @@ def main():
             y_lower = stats['p90']
             y_upper = stats['p95'] + (stats['p95'] - stats['p90'])
             uncertainty_label = "P90-P95+"
+        elif args.plot_type == 'p99':
+            y_values = stats['p99']
+            y_lower = stats['p99']
+            y_upper = stats['p99'] + (stats['p99'] - stats['p99'])
+            uncertainty_label = "P99"
         elif args.plot_type == 'tail_avg':
             y_values = stats['tail_avgs']
             y_lower = stats['p90']
@@ -252,46 +263,59 @@ def main():
     
     if use_log_scale:
         def log_formatter(x, p):
-            if abs(x) < 1e3:  # Linear region - hide these labels
-                return ''
-            elif abs(x) >= 1e6:
+            if x >= 1e6:
                 return f'{x/1e6:.1f}M'
-            elif abs(x) >= 1e3:
+            if x >= 1e3:
                 return f'{x/1e3:.0f}K'
-            return format(int(x), ',')
+            return f'{x:.0f}'
         ax.set_yscale('log')
-        ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
-        ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(0.1, 1, 0.1), numticks=10))
-        ax.yaxis.set_minor_formatter(FuncFormatter(log_formatter))
+        ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=8))
         ax.yaxis.set_major_formatter(FuncFormatter(log_formatter))
-        ax.tick_params(axis='y', which='minor', labelsize=10)
         print(f"Using logarithmic y-axis scale (ratio threshold: {args.log_threshold})")
     
     # Second pass: plot the data
     for i, fd in enumerate(file_data):
         x = np.arange(len(fd['y_values']))
-        
-        # Format label with statistics
+        label = f"{format_filename_for_label(fd['filename'])}"
         stat_mean = np.mean(fd['y_values'])
         stat_std = np.std(fd['y_values'])
-        label = f"{format_filename_for_label(fd['filename'])}"
-        
-        # Plot the main line
-        ax.axhline(y=stat_mean, color=fd['color'], linestyle='--', linewidth=1.5, alpha=0.8)
-        ax.plot(x, fd['y_values'], 'o-', color=fd['color'], label=label, 
-                markersize=8, linewidth=2, markeredgewidth=1, markeredgecolor='white')
-        
-        # Plot uncertainty bands if requested (single horizontal band based on overall statistics)
+
+        ax.axhline(y=stat_mean, color=fd['color'], linestyle='--', alpha=0.65, linewidth=1.5, zorder=1)
+
         if args.show_uncertainty:
-            if not use_log_scale:
-                # Linear scale: use mean ± std
-                ax.axhspan(stat_mean - stat_std, stat_mean + stat_std, color=fd['color'], alpha=0.15, zorder=1)
+            if use_log_scale:
+                positive_y = fd['y_values'][fd['y_values'] > 0]
+                if len(positive_y) > 0:
+                    geom_mean = np.exp(np.mean(np.log(positive_y)))
+                    geom_std_factor = np.exp(np.std(np.log(positive_y)))
+                    ax.axhspan(
+                        geom_mean / geom_std_factor,
+                        geom_mean * geom_std_factor,
+                        color=fd['color'],
+                        alpha=0.15,
+                        zorder=0,
+                    )
             else:
-                # Log scale: use geometric mean and multiplicative std
-                if np.all(fd['y_values'] > 0):
-                    geom_mean = gmean(fd['y_values'])
-                    geom_std = np.exp(np.std(np.log(fd['y_values'])))
-                    ax.axhspan(geom_mean / geom_std, geom_mean * geom_std, color=fd['color'], alpha=0.15, zorder=1)
+                ax.axhspan(
+                    stat_mean - stat_std,
+                    stat_mean + stat_std,
+                    color=fd['color'],
+                    alpha=0.15,
+                    zorder=0,
+                )
+
+        ax.plot(
+            x,
+            fd['y_values'],
+            color=fd['color'],
+            label=label,
+            linewidth=2,
+            linestyle='-',
+            markersize=7,
+            marker=markers[i % len(markers)],
+            markeredgewidth=0.8,
+            zorder=2,
+        )
     
     # Customize the plot
     ax.set_xlabel(args.xlabel)
@@ -306,15 +330,16 @@ def main():
         # ax.set_title(f'Windowed {args.plot_type.capitalize()} (window={args.window_size:,}){uncertainty_text}{scale_text}', 
         #             fontweight='bold', pad=20)
     
-    # Improve legend
     legend = ax.legend(
-        loc='center left', 
-        bbox_to_anchor=(1.05, 0.5), 
-        frameon=True, fancybox=True, shadow=True
+        loc='center left',
+        bbox_to_anchor=(1.05, 0.5),
+        frameon=True,
+        fancybox=True,
+        shadow=True,
     )
     legend.get_frame().set_facecolor('white')
     legend.get_frame().set_alpha(0.8)
-    
+
     # Improve grid and axes
     ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.8)
     ax.set_axisbelow(True)
@@ -324,13 +349,9 @@ def main():
         ax.ticklabel_format(style='scientific', axis='y', scilimits=(-3, 3))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=8))
     
-    # Limit number of ticks to avoid crowding
     ax.xaxis.set_major_locator(MaxNLocator(nbins=8))
-    
-    # Add minor ticks
-    ax.minorticks_on()
-    
-    # Improve layout
+    ax.set_xlim(left=0)
+
     plt.tight_layout(rect=[0, 0, 0.8, 1])
     
     fig.patch.set_alpha(0.0)
@@ -357,11 +378,13 @@ def main():
         max_val = np.max([np.max(y) for y in all_y_values if len(y) > 0])
         print(f"Y-axis range: {min_val:.2e} to {max_val:.2e} (ratio: {max_val/min_val:.1f}x)")
     
-    # Optionally show the plot
-    try:
-        plt.show()
-    except:
-        pass
+    # Show the plot only in interactive backends.
+    backend = plt.get_backend().lower()
+    if "agg" not in backend:
+        try:
+            plt.show()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()

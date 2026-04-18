@@ -68,6 +68,7 @@ def main():
         "Qwen2-1.5B": "Qwen/Qwen2-1.5B",
         "Phi-3-Mini": "microsoft/Phi-3-mini-4k-instruct",
         "GPT2-Medium": "gpt2-medium",
+        "Starcoder2-3B": "bigcode/starcoder2-3b",
         "GPT2-Large": "gpt2-large",
         "GPT-Neo-2.7B": "EleutherAI/gpt-neo-2.7B",
         "BLOOM-3B": "bigscience/bloom-3b",
