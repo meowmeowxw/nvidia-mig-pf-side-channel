@@ -58,9 +58,9 @@ run_test "inactive"
 stop_all_containers
 
 # # 
-start_background_program "2"
-run_test "ld_cg_st_cg"
-stop_all_containers
+# start_background_program "2"
+# run_test "ld_cg_st_cg"
+# stop_all_containers
 
 start_background_model "mobilenetv2"
 run_test "pytorch"

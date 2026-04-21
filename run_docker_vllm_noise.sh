@@ -53,15 +53,16 @@ NOISE_CONFIGS=(
 
 # Test subset of models for noise robustness study
 MODELS=(
+    "Starcoder2-3B"
     "Qwen2-1.5B"
     "GPT2-Medium"
     "GPT2-Large"
     "StableLM"
     "OLMo-1B"
-    # "OPT-125m"
-    # "Phi-3-Mini"
-    # "TinyLlama-1B"
-    # "GPT-Neo-2.7B"
+    "OPT-125m"
+    "Phi-3-Mini"
+    "TinyLlama-1B"
+    "GPT-Neo-2.7B"
 )
 
 echo "=== PCIe Noise Robustness Test ==="
