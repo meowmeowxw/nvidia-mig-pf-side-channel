@@ -1,9 +1,12 @@
 #!/bin/bash
 
+sudo apt update
+sudo apt install make build-essential gcc
+
 export NV_DRV_VERSION=570.133.07
 wget https://us.download.nvidia.com/XFree86/Linux-x86_64/$NV_DRV_VERSION/NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run
 chmod +x NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run
-./NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run --kernel-module-type=open
+sudo ./NVIDIA-Linux-x86_64-$NV_DRV_VERSION.run --kernel-module-type=open
 
 
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
@@ -38,6 +41,8 @@ sudo apt-get install -y nvidia-container-toolkit
 
 sudo systemctl restart docker.service
 sudo nvidia-smi -i 0 --lock-gpu-clocks=600,600
+# H100 
+# sudo nvidia-smi -i 0 --lock-gpu-clocks=1020,1020
 sudo nvidia-smi -pm 1
 sudo nvidia-smi -i 0 -mig 1
 # H100

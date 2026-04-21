@@ -35,6 +35,7 @@ start_background_model() {
 stop_all_containers
 
 MODELS=(
+    "Starcoder2-3B"
     "Qwen2-1.5B"
     "Phi-3-Mini"
     "GPT2-Medium"
