@@ -18,6 +18,8 @@ variation:
 3. Shared kernel-level driver code and queue (fault buffer) - Only applicable to
 concurrent UVM workloads in containerized environments.
 
+Full paper at: https://openreview.net/forum?id=RffwXvNEMJ
+
 ## Tests
 
 ### Requirements and Setup
