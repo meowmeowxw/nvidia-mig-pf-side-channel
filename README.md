@@ -18,7 +18,7 @@ variation:
 3. Shared kernel-level driver code and queue (fault buffer) - Only applicable to
 concurrent UVM workloads in containerized environments.
 
-Full paper at: TODO
+Full paper: [https://download.vusec.net/papers/migraine_uasc27.pdf](https://download.vusec.net/papers/migraine_uasc27.pdf)
 
 ## Tests
 
