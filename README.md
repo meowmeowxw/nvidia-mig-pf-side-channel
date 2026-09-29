@@ -72,4 +72,4 @@ python3 classifier_llm.py --logs_dir ./logs_llm/ --window_size 30000 --step 3000
 
 ## Disclosure
 
-We reported to NVIDIA that side channel can fingerprint ML workloads across GPU Instances in march 2025, and they acknowledged the risk.
+We reported to NVIDIA that this side channel can fingerprint ML workloads across GPU Instances in march 2025, and they acknowledged the risk.
