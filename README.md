@@ -1,4 +1,4 @@
-# NVIDIA MIG Page Fault Side Channel
+# MIGraine: Practical Side-channel Attacks on NVIDIA Multi-Instance GPUs via Page Fault Contention
 
 ## Introduction
 
@@ -73,3 +73,17 @@ python3 classifier_llm.py --logs_dir ./logs_llm/ --window_size 30000 --step 3000
 ## Disclosure
 
 We reported to NVIDIA that this side channel can fingerprint ML workloads across GPU Instances in march 2025, and they acknowledged the risk.
+
+## Cite
+
+```
+@inproceedings{disantiMIGrainePracticalSidechannel2027,
+	title = {{MIGraine}: {Practical} {Side}-channel {Attacks} on {NVIDIA} {Multi}-{Instance} {GPUs} via {Page} {Fault} {Contention}},
+	url = {Paper=https://download.vusec.net/papers/migraine_uasc27.pdf},
+	booktitle = {{uASC}},
+	author = {Di Santi, Giovanni and Di Dio, Andrea and Giuffrida, Cristiano},
+	month = feb,
+	year = {2027},
+	keywords = {class\_sidechannels, proj\_ictprize, proj\_intersect, proj\_rescale, proj\_themis, type\_assigned\_cve, type\_conf, type\_paper, type\_top},
+}
+```
